@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>Multiple Choice Answer</title>
+
+		<link rel="stylesheet" href="/openlearning.css">
+		<link rel="stylesheet" href="mcq.css">
+		<script src="/openlearning.js"></script>
+		<script type="text/javascript" src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+	</head>
+	<body>
+		<label class="label-option">
+			<span>Heading:</span>
+			<input id="heading" type="text" placeholder="Optional heading description">
+		</label>
+		<label class="label-option">
+			<span>Align answers:</span>
+			<select id="align" class="inpt-selection">
+				<option value="horizontal">Horizontally</option>
+				<option value="vertical">Vertically</option>
+			</select>
+		</label>
+		<label class="label-option">
+			<span>Answer type:</span>
+			<select id="answer-type" class="inpt-selection">
+				<option value="radio">Single Answer</option>
+				<option value="checkbox">Multiple Selection (checkboxes)</option>
+			</select>
+		</label>
+		<label class="label-option">
+			<span>Answers:</span>
+			<input type="number" min="1" id="num-answers">
+		</label>
+
+		<label class="label-option">
+			<span>Completed:</span>
+			<select id="completion" class="inpt-selection">
+				<option value="correct">When the correct answer is selected</option>
+				<option value="selected">When any answer is selected</option>
+			</select>
+		</label>
+
+		<label class="label-option">
+			<span>Feedback:</span>
+			<select id="feedback" class="inpt-selection">
+				<option value="show-answers">Show correct answer(s) when one is selected</option>
+				<option value="show-correct">Only show whether answer is correct or incorrect</option>
+				<option value="none">No feedback</option>
+			</select>
+		</label>
+
+		<div id="answers"></div>
+
+
+
+		<script type="text/javascript">
+			var saveAppData = function(appData, callback) {
+				OL.setup.merge(appData, callback);
+			};
+
+			var insertAnswer = function(type, answer, choice, index, align) {
+				var $answers, $answer, $answerText;
+
+				$answers = $('#answers');
+				$answerText = $('<textarea>').val(answer);
+
+				if (type === 'radio') {
+					$answer = $('<input>', {
+						type: 'radio',
+						name: 'answer',
+						value: index
+					});
+
+					if (choice && $.inArray(index, choice) !== -1) {
+						$answer.prop('checked', true);
+					}
+
+					$answers.append(
+						$('<label>')
+							.addClass(align)
+							.append($answer)
+							.append($answerText)
+					);
+				} else if (type === 'checkbox') {
+					$answer = $('<input>', {
+						type: 'checkbox',
+						name: 'answer-' + index,
+						value: index
+					});
+
+					if (choice && $.inArray(index, choice) !== -1) {
+						$answer.prop('checked', true);
+					}
+
+					$answers.append(
+						$('<label>')
+							.addClass(align)
+							.append($answer)
+							.append($answerText)
+					);
+				}
+
+				autosize($answerText);
+			};
+
+			var autosize = function($textarea) {
+				function resize () {
+					$textarea.css('height', 'auto').height($textarea[0].scrollHeight);
+					OL.resize();
+				}
+				function delayedResize () {
+					window.setTimeout(resize, 0);
+				}
+				$textarea.on('change', resize);
+				$textarea.on('cut paste drop keydown', delayedResize);
+
+				$textarea.focus();
+				$textarea.select();
+				resize();
+			};
+
+			var init = function() {
+				var heading, answers, answerType, i, len;
+
+				heading        = OL.setup.data.heading;
+				answers        = OL.setup.data.answers;
+				answerType     = OL.setup.data.type;
+				align          = OL.setup.data.align;
+				correctAnswers = OL.setup.data.correctAnswers;
+				completedSetting = OL.setup.data.completedSetting;
+				feedbackSetting  = OL.setup.data.feedbackSetting;
+
+				if (!answers) {
+					answers = ["Answer A", "Answer B", "Answer C"];
+				}
+
+				if (!answerType) {
+					answerType = 'radio';
+				}
+
+				if (!align) {
+					align = 'vertical';
+				}
+
+				if (!completedSetting) {
+					completedSetting = 'correct';
+				}
+
+				if (!feedbackSetting) {
+					feedbackSetting = 'show-answers';
+				}
+
+				if (!correctAnswers) {
+					correctAnswers = [];
+				}
+
+				len = answers.length;
+
+				for (i = 0; i < len; i++) {
+					insertAnswer(answerType, answers[i], correctAnswers, ''+i, align);
+				}
+
+				$('#heading').val(heading);
+
+				$('#align').val(align).on('change', function() {
+					$('#answers')
+						.find('label')
+						.removeClass('horizontal vertical')
+						.addClass($(this).val())
+					;
+					OL.resize();
+				});
+
+				$('#answer-type').val(answerType).on('change', function() {
+					// recreate the inputs with the current values
+					var correctAnswers = [];
+					var answers = [];
+					var align = $('#align').val();
+					var answerType = $(this).val();
+
+					var i, len;
+
+					$('#answers textarea').each(function(i, textarea) {
+						answers.push($(textarea).val());
+					});
+
+					$('#answers input:checked').each(function(i, checkbox) {
+						correctAnswers.push($(checkbox).val());
+					});
+					
+					$('#answers').empty();
+
+					len = answers.length;
+
+					for (i = 0; i < len; i++) {
+						insertAnswer(answerType, answers[i], correctAnswers, ''+i, align);
+					}
+
+					OL.resize();
+				});
+
+				$('#completion').val(completedSetting);
+
+				$('#feedback').val(feedbackSetting);
+
+				$('#num-answers').val(''+len).on('change', function() {
+					var correctAnswers = [];
+					var answers = [];
+					var align = $('#align').val();
+					var answerType = $('#answer-type').val();
+					var num = parseInt($(this).val());
+
+					var i, len;
+
+					$('#answers textarea').each(function(i, textarea) {
+						answers.push($(textarea).val());
+					});
+
+					$('#answers input:checked').each(function(i, checkbox) {
+						correctAnswers.push($(checkbox).val());
+					});
+
+					len = answers.length;
+
+					if (num === len) {
+						return;
+					}
+
+					if (num < len) {
+						for (i = 0; i < (len - num); i++) {
+							answers.pop();
+						}
+					} else {
+						for (i = 0; i < (num - len); i++) {
+							answers.push('Answer ' + (len+i+1));
+						}
+					}
+
+					$('#answers').empty();
+
+					len = answers.length;
+
+					for (i = 0; i < len; i++) {
+						insertAnswer(answerType, answers[i], correctAnswers, ''+i, align);
+					}
+
+					OL.resize();
+				});
+
+				OL.on('save', function(data, saveCallback) {
+					if (data.modeChange.to === 'display') {
+						var correctAnswers = [];
+						var answers = [];
+
+						$('#answers textarea').each(function(i, textarea) {
+							answers.push($(textarea).val());
+						});
+
+						$('#answers input:checked').each(function(i, checkbox) {
+							correctAnswers.push($(checkbox).val());
+						});
+
+						saveAppData({
+							'heading': $('#heading').val(),
+							'align': $('#align').val(),
+							'type': $('#answer-type').val(),
+							'completedSetting': $('#completion').val(),
+							'feedbackSetting': $('#feedback').val(),
+							'answers': answers,
+							'correctAnswers': correctAnswers
+						}, saveCallback);
+					}
+				});
+
+				OL.resize();
+			};
+
+			OL(init);
+		</script>
+	</body>
+</html>

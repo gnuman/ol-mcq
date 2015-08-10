@@ -1,0 +1,21 @@
+{
+    "name": "mcq",
+    "author": "anish",
+    "email": "anish@openlearning.com",
+    "license": "Apache2",
+    "version": "2",
+    "main": "mcq/display.html",
+    "description": "This is a test activity",
+    "setup": "mcq/setup.html",
+    "category": "education",
+    "ignore": [
+	".jshintrc",
+	"**/*.txt",
+	"examples/*"
+    ],
+    "dependencies": {
+	"<name>": "<version>",
+	"<name>": "<folder>",
+	"<name>": "<package>"
+    }
+}

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>Multiple Choice Answer</title>
+
+		<link rel="stylesheet" href="../openlearning.css">
+		<link rel="stylesheet" href="mcq.css">
+		<script src="../openlearning.js"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	</head>
+	<body>
+		<div id="heading"></div>
+		<div id="feedback"></div>
+		<div id="answers"></div>
+		<div id="controls"></div>
+		
+		<script type="text/javascript">
+			var addFeedback = function(isCorrect, choices) {
+				var feedback = OL.setup.data.feedbackSetting;
+				var answers = [];
+
+				if (feedback === 'none' || OL.setup.data.completedSetting === 'selected') {
+					return;
+				}
+
+				if (feedback === 'show-answers' || feedback === 'show-correct') {
+					$('#feedback').html(
+						$('<span>')
+							.text(isCorrect ? 'Correct' : 'Incorrect')
+							.addClass(isCorrect ? 'correct': 'incorrect')
+					);
+				}
+
+				if (feedback === 'show-answers') {
+					if (typeof OL.setup.data.correctAnswers === 'string') {
+						answers = [OL.setup.data.correctAnswers];
+					} else {
+						answers = OL.setup.data.correctAnswers;
+					}
+
+					answers.forEach(function(answer) {
+						$('#answer-label-' + answer).addClass('correct');
+					});
+				}
+			};
+
+			var saveAnswer = function(type, choices) {
+				var isCorrect = false;
+				var correct = OL.setup.data.correctAnswers;
+
+				OL.user.logInteraction();
+
+				if (typeof choices === 'string') {
+					choices = [choices];
+				}
+				
+				isCorrect = (choices.sort().join('|') === correct.sort().join('|'));
+
+				if (OL.setup.data.completedSetting === 'selected') {
+					isCorrect = true;
+				}
+				
+				OL.user.replace({
+					choices: choices,
+					isCorrect: OL.user.data.isCorrect || isCorrect
+				});
+
+				if (isCorrect) {
+					OL.user.assess(1.0, true);
+				}
+
+				addFeedback(isCorrect, choices);
+			};
+
+			var insertAnswer = function(type, answer, choices, index, align) {
+				var $answers = $('#answers');
+
+				var $answer;
+				var $answerText = $('<span>').text(answer);
+
+				if (type === 'radio') {
+					$answer = $('<input>', {
+						type: 'radio',
+						name: 'answer',
+						value: index
+					});
+
+					if (choices && index === choices[0]) {
+						$answer.prop('checked', true);
+					}
+
+					$answers.append(
+						$('<label>', {id: 'answer-label-' + index})
+							.addClass(align)
+							.append($answer)
+							.append($answerText)
+					);
+
+					$answer.on('change click', function(evt) {
+						saveAnswer(type, $(this).val());
+					});
+				} else if (type === 'checkbox') {
+					$answer = $('<input>', {
+						type: 'checkbox',
+						name: 'answer-' + index,
+						value: index
+					});
+
+					if (choices && $.inArray(index, choices) !== -1) {
+						$answer.prop('checked', true);
+					}
+
+					$answers.append(
+						$('<label>', {id: 'answer-label-' + index})
+							.addClass(align)
+							.append($answer)
+							.append($answerText)
+					);
+				}
+			};
+
+			var init = function() {
+				var heading     = OL.setup.data.heading;
+				var answers     = OL.setup.data.answers;
+				var answerType  = OL.setup.data.type;
+				var align       = OL.setup.data.align;
+				var userChoices = OL.user.data.choices;
+
+				var i, len;
+
+				if (heading) {
+					$('#heading').append(
+						$('<h4>').text(heading)
+					);
+				}
+
+				if (!answers) {
+					answers = ["Answer 1", "Answer 2", "Answer 3"];
+				}
+
+				if (!answerType) {
+					answerType = 'radio';
+				}
+
+				if (!align) {
+					align = 'horizontal';
+				}
+
+				len = answers.length;
+
+				for (i = 0; i < len; i++) {
+					insertAnswer(answerType, answers[i], userChoices, ''+i, align);
+				}
+
+				if (answerType === 'checkbox') {
+					$('#controls').append(
+						$('<button>', {type: 'button'})
+							.addClass('btn')
+							.text('Save Answers')
+							.on('click', function() {
+								var selectedAnswers = [];
+
+								$('#answers input:checked').each(function(i, checkbox) {
+									selectedAnswers.push($(checkbox).val());
+								});
+								saveAnswer(answerType, selectedAnswers);
+							})
+					);
+				}
+
+				if (OL.user.data.isCorrect === false || OL.user.data.isCorrect === true) {
+					addFeedback(OL.user.data.isCorrect, userChoices);
+				}
+			};
+
+			OL(init);
+		</script>
+	</body>
+</html>
